@@ -6,6 +6,8 @@
 //! # Example
 //!
 //! ```rust
+//! # use std::sync::Arc;
+//! # use std::time::Duration;
 //! # use sparkle_interactions::{builder::InteractionResponseBuilder, InteractionHandle};
 //! # use twilight_http::Client;
 //! # use twilight_model::{
@@ -46,10 +48,14 @@
 //! #     tts: None,
 //! # };
 //! #
-//! # let client = Client::new("a".to_owned());
-//! let interaction_client = client.interaction(interaction.application_id);
-//! let handle = InteractionHandle::new(&interaction_client, interaction.id, &interaction.token)
-//!     .track_last_message();
+//! # let client = Arc::new(Client::new("a".to_owned()));
+//! # let application_id = Id::new(1);
+//! let handle = InteractionHandle::new(client, application_id, interaction.id, interaction.token)
+//!     .track_last_message()
+//!     .defer_automatically();
+//!
+//! tokio::time::sleep(Duration::from_secs(3)).await;
+//! // interaction is deferred here
 //!
 //! handle
 //!     .respond(InteractionResponseBuilder::send_message(
@@ -80,12 +86,12 @@ use std::{
     },
 };
 
-use twilight_http::{client::InteractionClient, response::DeserializeBodyError, Response};
+use twilight_http::{client::InteractionClient, response::DeserializeBodyError, Client, Response};
 use twilight_model::{
     channel::Message,
     http::interaction::InteractionResponse,
     id::{
-        marker::{InteractionMarker, MessageMarker},
+        marker::{ApplicationMarker, InteractionMarker, MessageMarker},
         Id,
     },
 };
@@ -176,32 +182,35 @@ impl FollowupResponse {
 /// It can be cloned safely without losing stateful data, it is also
 /// thread-safe.
 #[derive(Clone, Debug)]
-pub struct InteractionHandle<'a> {
-    client: &'a InteractionClient<'a>,
+pub struct InteractionHandle {
+    application_id: Id<ApplicationMarker>,
+    client: Arc<Client>,
     id: Id<InteractionMarker>,
-    token: &'a str,
+    token: String,
     is_responded: Arc<AtomicBool>,
     last_message_id: Arc<AtomicU64>,
     is_last_message_tracked: bool,
 }
 
-impl<'a> InteractionHandle<'a> {
+impl InteractionHandle {
     const LOAD_ORDERING: Ordering = Ordering::Acquire;
     const STORE_ORDERING: Ordering = Ordering::Release;
 
     /// Create a new handle for an interaction
     ///
-    /// # Warnings
+    /// # Warning
     ///
     /// Create only one handle per interaction. Otherwise, the interaction's
     /// state will be lost.
     #[must_use]
     pub fn new(
-        client: &'a InteractionClient<'a>,
+        client: Arc<Client>,
+        application_id: Id<ApplicationMarker>,
         interaction_id: Id<InteractionMarker>,
-        token: &'a str,
+        token: String,
     ) -> Self {
         Self {
+            application_id,
             client,
             id: interaction_id,
             token,
@@ -213,7 +222,7 @@ impl<'a> InteractionHandle<'a> {
 
     /// Set the handle to track the last message to be able to use
     /// [`InteractionHandle::update_last`] and
-    /// [`InteractionHandle::last_message`].
+    /// [`InteractionHandle::last_message`]
     ///
     /// This makes [`InteractionHandle::respond`] deserialize every request.
     ///
@@ -225,6 +234,49 @@ impl<'a> InteractionHandle<'a> {
     pub const fn track_last_message(mut self) -> Self {
         self.is_last_message_tracked = true;
         self
+    }
+
+    /// Return the [`InteractionClient`] for this handle.
+    #[must_use]
+    pub fn client(&self) -> InteractionClient<'_> {
+        self.client.interaction(self.application_id)
+    }
+
+    /// Defer this interaction automatically if necessary
+    ///
+    /// Discord allows a 3-second period to respond to the interaction.
+    /// This function waits 2.5 seconds (assuming the worst-case request time to
+    /// be 500ms), and sends a defer response if no response has been sent
+    /// yet.
+    ///
+    /// # Warnings
+    ///
+    /// This must be called as soon as possible after an `InteractionCreate`
+    /// event was received to ensure the accuracy of the wait-period.
+    ///
+    /// Due to complexities involving error handling in a non-blocking method,
+    /// if sending the response fails, it is ignored.
+    /// Though, if an error did occur, it can be detected in a later response to
+    /// the interaction.
+    #[cfg(feature = "automatic_defer")]
+    #[must_use]
+    pub fn defer_automatically(self) -> Self {
+        let handle = self.clone();
+
+        tokio::spawn(async move {
+            tokio::time::sleep(std::time::Duration::from_millis(2500)).await;
+
+            if !self.is_responded() {
+                drop(
+                    self.respond(
+                        crate::builder::InteractionResponseBuilder::defer_send_message().build(),
+                    )
+                    .await,
+                );
+            }
+        });
+
+        handle
     }
 
     /// Respond to the interaction with the given response.
@@ -266,8 +318,8 @@ impl<'a> InteractionHandle<'a> {
                 Ok(FollowupResponse::NotDeserialized(followup_response))
             }
         } else {
-            self.client
-                .create_response(self.id, self.token, &response)
+            self.client()
+                .create_response(self.id, &self.token, &response)
                 .await?;
 
             self.set_is_responded(true);
@@ -276,10 +328,10 @@ impl<'a> InteractionHandle<'a> {
         }
     }
 
-    /// Update the last response to the interaction.
+    /// Update the last response to the interaction
     ///
     /// There is a builder for [`InteractionResponse`] at
-    /// [`InteractionResponseBuilder`]
+    /// [`InteractionResponseBuilder`].
     ///
     /// # Errors
     ///
@@ -294,8 +346,11 @@ impl<'a> InteractionHandle<'a> {
         &self,
         response: InteractionResponse,
     ) -> Result<Response<Message>, Error> {
+        let interaction_client = self.client();
+
         if let Some(last_message_id) = self.last_message_id()? {
-            let mut update_followup = self.client.update_followup(self.token, last_message_id);
+            let mut update_followup =
+                interaction_client.update_followup(&self.token, last_message_id);
 
             let Some(data) = response.data else {
                 return Ok(update_followup.await?);
@@ -311,7 +366,7 @@ impl<'a> InteractionHandle<'a> {
 
             Ok(update_followup.await?)
         } else {
-            let mut update_response = self.client.update_response(self.token);
+            let mut update_response = interaction_client.update_response(&self.token);
 
             let Some(data) = response.data else {
                 return Ok(update_response.await?);
@@ -355,7 +410,8 @@ impl<'a> InteractionHandle<'a> {
         &self,
         response: InteractionResponse,
     ) -> Result<Response<Message>, Error> {
-        let mut create_followup = self.client.create_followup(self.token);
+        let interaction_client = self.client();
+        let mut create_followup = interaction_client.create_followup(&self.token);
 
         let Some(data) = response.data else {
             return Ok(create_followup.await?);
@@ -403,6 +459,8 @@ impl<'a> InteractionHandle<'a> {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
+
     use twilight_http::Client;
     use twilight_model::id::Id;
 
@@ -411,8 +469,9 @@ mod tests {
     #[test]
     fn test_data_integrity() {
         let client = Client::new("a".to_owned());
-        let interaction_client = client.interaction(Id::new(1));
-        let handle = InteractionHandle::new(&interaction_client, Id::new(1), "a");
+        let handle =
+            InteractionHandle::new(Arc::new(client), Id::new(1), Id::new(1), "a".to_owned());
+        #[allow(clippy::redundant_clone)]
         let handle_clone = handle.clone();
 
         handle.set_is_responded(true);
