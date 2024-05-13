@@ -51,7 +51,7 @@ impl DeferInteractionResponseBuilder {
         }
 
         InteractionResponse {
-            kind: InteractionResponseType::DeferredChannelMessageWithSource,
+            kind: self.response_type,
             data: Some(InteractionResponseData {
                 allowed_mentions: None,
                 attachments: None,
