@@ -332,6 +332,9 @@ impl InteractionHandle {
 
     /// Update the last response to the interaction
     ///
+    /// If no earlier response has been sent, this creates a new response and
+    /// returns `None`.
+    ///
     /// There is a builder for [`InteractionResponse`] at
     /// [`InteractionResponseBuilder`].
     ///
@@ -347,7 +350,7 @@ impl InteractionHandle {
     pub async fn update_last(
         &self,
         response: InteractionResponse,
-    ) -> Result<Response<Message>, Error> {
+    ) -> Result<Option<Response<Message>>, Error> {
         let interaction_client = self.client();
 
         if let Some(last_message_id) = self.last_message_id()? {
@@ -355,7 +358,7 @@ impl InteractionHandle {
                 interaction_client.update_followup(&self.token, last_message_id);
 
             let Some(data) = response.data else {
-                return Ok(update_followup.await?);
+                return Ok(Some(update_followup.await?));
             };
 
             if let Some(attachments) = &data.attachments {
@@ -366,23 +369,10 @@ impl InteractionHandle {
             update_followup = update_followup.content(data.content.as_deref())?;
             update_followup = update_followup.embeds(data.embeds.as_deref())?;
 
-            Ok(update_followup.await?)
+            Ok(Some(update_followup.await?))
         } else {
-            let mut update_response = interaction_client.update_response(&self.token);
-
-            let Some(data) = response.data else {
-                return Ok(update_response.await?);
-            };
-
-            if let Some(attachments) = &data.attachments {
-                update_response = update_response.attachments(attachments)?;
-            }
-
-            update_response = update_response.components(data.components.as_deref())?;
-            update_response = update_response.content(data.content.as_deref())?;
-            update_response = update_response.embeds(data.embeds.as_deref())?;
-
-            Ok(update_response.await?)
+            self.respond(response).await?;
+            Ok(None)
         }
     }
 
