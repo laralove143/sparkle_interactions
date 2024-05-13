@@ -74,7 +74,7 @@ std_instead_of_core = "allow"
 wildcard_enum_match_arm = "allow"
 
 [dependencies]
-twilight-http = { version = "0.15", features = ["rustls-webpki-roots", "simd-json", "trust-dns"] }
+twilight-http = { version = "0.15", default-features = false }
 twilight-model = "0.15"
 twilight-validate = "0.15"
 tokio = { version = "1.37", features = ["time"], default-features = false, optional = true }
