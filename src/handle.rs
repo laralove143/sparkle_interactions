@@ -52,7 +52,10 @@
 //! # let application_id = Id::new(1);
 //! let handle = InteractionHandle::new(client, application_id, interaction.id, interaction.token)
 //!     .track_last_message()
-//!     .defer_automatically();
+//!     .respond_on_delay(
+//!         InteractionResponseBuilder::defer_send_message().build(),
+//!         Duration::from_secs(2),
+//!     );
 //!
 //! tokio::time::sleep(Duration::from_secs(3)).await;
 //! // interaction is deferred here
@@ -242,12 +245,12 @@ impl InteractionHandle {
         self.client.interaction(self.application_id)
     }
 
-    /// Defer this interaction automatically if necessary
+    /// Send a response if no other response has been sent in the given timeout
+    /// period
     ///
-    /// Discord allows a 3-second period to respond to the interaction.
-    /// This function waits 2.5 seconds (assuming the worst-case request time to
-    /// be 500ms), and sends a defer response if no response has been sent
-    /// yet.
+    /// This can be used to defer interactions if they aren't responded to
+    /// within the 3-second period Discord allows for the first response.
+    /// The response can be a defer response or a custom response.
     ///
     /// # Warnings
     ///
@@ -258,21 +261,20 @@ impl InteractionHandle {
     /// if sending the response fails, it is ignored.
     /// Though, if an error did occur, it can be detected in a later response to
     /// the interaction.
-    #[cfg(feature = "automatic_defer")]
+    #[cfg(feature = "respond_on_delay")]
     #[must_use]
-    pub fn defer_automatically(self) -> Self {
+    pub fn respond_on_delay(
+        self,
+        response: InteractionResponse,
+        delay: std::time::Duration,
+    ) -> Self {
         let handle = self.clone();
 
         tokio::spawn(async move {
-            tokio::time::sleep(std::time::Duration::from_millis(2500)).await;
+            tokio::time::sleep(delay).await;
 
             if !self.is_responded() {
-                drop(
-                    self.respond(
-                        crate::builder::InteractionResponseBuilder::defer_send_message().build(),
-                    )
-                    .await,
-                );
+                drop(self.respond(response).await);
             }
         });
 
