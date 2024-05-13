@@ -35,7 +35,6 @@ unreachable_pub = "warn"
 unsafe_code = "warn"
 unsafe_op_in_unsafe_fn = "warn"
 unstable_features = "warn"
-unused_crate_dependencies = "warn"
 unused_extern_crates = "warn"
 unused_import_braces = "warn"
 unused_lifetimes = "warn"
@@ -79,6 +78,13 @@ twilight-http = { version = "0.15", features = ["rustls-webpki-roots", "simd-jso
 twilight-model = "0.15"
 twilight-validate = "0.15"
 tokio = { version = "1.37", features = ["time"], default-features = false, optional = true }
+
+[dev-dependencies]
+anyhow = "1.0"
+dotenvy = { version = "0.15" }
+twilight-gateway = "0.15"
+twilight-util = { version = "0.15.4", features = ["builder"] }
+tokio = { version = "1.37", features = ["rt-multi-thread", "macros"] }
 
 [features]
 respond_on_delay = ["dep:tokio"]

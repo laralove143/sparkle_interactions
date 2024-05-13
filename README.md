@@ -66,6 +66,28 @@ crate supports.
 For example, for a version of the crate that supports Twilight `0.15.4`, this crate's version will
 be `0.15.x`, where `x` can be any number.
 
+## 🧪 Testing
+
+This crate makes use of unit tests and integration tests. Unit tests can be run as usual, while integration tests
+require some setup.
+
+Since integration tests receive Discord events and make requests to Discord, you should first set these environment
+variables in a `.env` file located in the root of this repository:
+
+- `BOT_TOKEN`: The token of the bot to use for testing
+- `GUILD_ID`: The ID of the server where the test command will be created
+- `CHANNEL_ID`: The ID of the channel where the test message with a component will be created
+
+Each test runs on an interaction.
+Since bots can't create interactions, when running the test, the bot will wait for
+an `InteractionCreate` event to use for testing.
+For tests that don't run on component interactions, you should first run the test then send
+the `sparkle_interactions_test` command manually, after which point the bot runs the test on the interaction you
+created.
+For tests that run on component interactions, the bot will send a message with the component upon running the test. Once
+you click on the component, testing will continue.
+
 ## 🙋 Wanted: Issues
 
-Feel free to create an issue or PR for suggestions and additions.
+While this crate is tested heavily, there may still be some bugs; or you might have some awesome ideas.
+Please to create issues or PRs for bug reports, suggestions, and additions.
