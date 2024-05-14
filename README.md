@@ -22,7 +22,7 @@
       <img alt="Sponsor" height="30" src="https://ziadoua.github.io/m3-Markdown-Badges/badges/Sponsor/sponsor1.svg"/>
    </a><br>
    <a href="https://docs.rs/sparkle_interactions">
-      <img alt="Documentation" height="25" src="https://img.shields.io/docsrs/sparkle-interactions?logo=docsdotrs&label=Documentation&labelColor=555F6F&color=77DD77">
+      <img alt="Documentation" height="25" src="https://img.shields.io/docsrs/sparkle_interactions?logo=docsdotrs&label=Documentation&labelColor=555F6F&color=77DD77">
    </a>
    <a href="https://crates.io/crates/sparkle_interactions">
       <img alt="Downloads" height="25" src="https://img.shields.io/crates/d/sparkle-interactions?logo=rust&label=Downloads&labelColor=555F6F&color=77DD77">
