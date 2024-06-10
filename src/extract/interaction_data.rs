@@ -6,6 +6,15 @@ use twilight_model::application::interaction::{
 /// Trait implemented on [`InteractionData`] to extract its variants without
 /// using pattern matching
 pub trait ExtractInteractionData {
+    /// Extract the name or custom ID of an interaction
+    ///
+    /// For [`InteractionData::ApplicationCommand`], this returns the name, for
+    /// other kinds, it returns the custom ID
+    ///
+    /// Returns `None` if the interaction is not a command, component or modal.
+    /// This is because [`InteractionData`] is marked non-exhaustive.
+    fn custom_id(&self) -> Option<&str>;
+
     /// Extract [`CommandData`] from an interaction
     ///
     /// Returns `None` if the interaction is not an application command
@@ -23,6 +32,15 @@ pub trait ExtractInteractionData {
 }
 
 impl ExtractInteractionData for InteractionData {
+    fn custom_id(&self) -> Option<&str> {
+        match self {
+            InteractionData::ApplicationCommand(command) => Some(&command.name),
+            InteractionData::MessageComponent(component) => Some(&component.custom_id),
+            InteractionData::ModalSubmit(modal) => Some(&modal.custom_id),
+            _ => None,
+        }
+    }
+
     fn command_data(self) -> Option<CommandData> {
         if let Self::ApplicationCommand(data) = self {
             Some(*data)

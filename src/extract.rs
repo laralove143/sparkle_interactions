@@ -9,7 +9,8 @@
 //!
 //! The [`Interaction`] struct contains an enum, [`InteractionData`], for the
 //! data in each [`InteractionType`]. [`ExtractInteractionData`] can be used to
-//! concisely extract the wrapped value in this enum.
+//! concisely extract the wrapped value in this enum. It can also be used to
+//! extract the custom ID or name of the interaction without pattern matching.
 //!
 //! For message component interactions, the extracted data is all you need to
 //! access the values.
