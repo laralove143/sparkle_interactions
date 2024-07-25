@@ -9,7 +9,9 @@ pub trait ExtractModalComponent {
     fn component(self, custom_id: &str) -> Option<String>;
 }
 
-/// Trait implemented on [`&[ModalInteractionDataActionRow]`] extract options
+/// Trait implemented on
+/// [`&[ModalInteractionDataActionRow]`](ModalInteractionDataActionRow) extract
+/// options
 pub trait ExtractModalComponentRef<'a> {
     /// Extract the value of the component with the given custom ID
     ///

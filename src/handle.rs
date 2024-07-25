@@ -104,6 +104,9 @@ use twilight_model::{
 };
 use twilight_validate::message::MessageValidationError;
 
+#[cfg(doc)]
+use crate::builder::InteractionResponseBuilder;
+
 /// Errors returned while responding to interactions
 #[derive(Debug)]
 pub enum Error {
@@ -229,7 +232,7 @@ impl InteractionHandle {
 
     /// Set the handle to track the last message to be able to use
     /// [`InteractionHandle::update_last`] and
-    /// [`InteractionHandle::last_message`]
+    /// [`InteractionHandle::last_message_id`]
     ///
     /// This makes [`InteractionHandle::respond`] deserialize every request.
     ///
@@ -308,8 +311,6 @@ impl InteractionHandle {
     /// couldn't be deserialized.
     ///
     /// Returns [`Error::Http`] if a request failed.
-    ///
-    /// [`InteractionResponseBuilder`]: crate::builder::InteractionResponseBuilder
     pub async fn respond(&self, response: InteractionResponse) -> Result<FollowupResponse, Error> {
         if self.is_responded() {
             let followup_response = self.create_followup(response).await?;

@@ -2,14 +2,11 @@
 //!
 //! The entrypoint of the builders for buttons and select menus is
 //! [`ComponentsBuilder`].
-//! Although this is not enforced, it provides abstractions over managing action rows,
-//! making your code safer.
+//! Although this is not enforced, it provides abstractions over managing action
+//! rows, making your code safer.
 //!
 //! Similar abstractions exist for modals at
-//! [`InteractionResponseBuilder::show_modal`](crate::builder::InteractionResponseBuilder::show_modal).
-//!
-//! [`InteractionResponseBuilder::show_modal`]:
-//! (crate::builder::InteractionResponseBuilder::show_modal)
+//! [`InteractionResponseBuilder::show_modal`].
 
 use twilight_model::{
     channel::message::{
@@ -20,6 +17,9 @@ use twilight_model::{
     },
     id::{marker::EmojiMarker, Id},
 };
+
+#[cfg(doc)]
+use crate::builder::InteractionResponseBuilder;
 
 /// Create a [`Button`] with a builder.
 #[derive(Clone, Eq, PartialEq, Hash, Debug)]
