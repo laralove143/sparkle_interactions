@@ -31,7 +31,7 @@
 //! The last type of interactions is modal interactions. [`InteractionData`]
 //! contains [`ModalInteractionData`] with the components in a modal. The
 //! components are nested vectors for each action row, which can complicate
-//! finding the value of components. [`ExtractModalComponent`] can be used to
+//! finding the value of components. [`ExtractModalComponentRef`] can be used to
 //! find the value of a component.
 //!
 //! ## Examples
@@ -148,7 +148,7 @@
 //!
 //! ```rust
 //! # use sparkle_interactions::extract::{
-//! #     ExtractInteractionData, ExtractModalComponent, ExtractOption,
+//! #     ExtractInteractionData, ExtractModalComponentRef, ExtractOption,
 //! # };
 //! # use twilight_model::{
 //! #     application::interaction::{
