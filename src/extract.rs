@@ -223,5 +223,6 @@ mod modal_component;
 mod option;
 
 pub use interaction_data::ExtractInteractionData;
-pub use modal_component::ExtractModalComponent;
+#[allow(deprecated)]
+pub use modal_component::{ExtractModalComponent, ExtractModalComponentRef};
 pub use option::{ExtractOption, ExtractOptionValue};
