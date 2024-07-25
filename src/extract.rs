@@ -55,6 +55,7 @@
 //! #     id::Id,
 //! # };
 //! #
+//! # fn example() -> Option<()> {
 //! # let interaction = Interaction {
 //! #     app_permissions: None,
 //! #     application_id: Id::new(1),
@@ -95,6 +96,8 @@
 //!     .command_data()?
 //!     .options
 //!     .option("fun/annoy/user")?;
+//! # Some(())
+//! # }
 //! ```
 //!
 //! ### Message Component Interactions
@@ -113,6 +116,7 @@
 //! # };
 //! # use sparkle_interactions::extract::ExtractInteractionData;
 //! #
+//! # fn example() -> Option<()> {
 //! # let interaction = Interaction {
 //! #     app_permissions: None,
 //! #     application_id: Id::new(1),
@@ -138,6 +142,8 @@
 //! # };
 //! #
 //! interaction.data?.component_data()?.values;
+//! # Some(())
+//! # }
 //! ```
 //!
 //! ### Modal Interactions
@@ -162,6 +168,7 @@
 //! #     id::Id,
 //! # };
 //! #
+//! # fn example() -> Option<()> {
 //! # let interaction = Interaction {
 //! #     app_permissions: None,
 //! #     application_id: Id::new(1),
@@ -194,6 +201,8 @@
 //!     .modal_data()?
 //!     .components
 //!     .component("name_surname")?;
+//! # Some(())
+//! # }
 //! ```
 //!
 //! # Differences from Twilight Interactions

@@ -6,9 +6,10 @@
 //! # Example
 //!
 //! ```rust
+//! # use anyhow::Result;
+//! # use sparkle_interactions::{builder::InteractionResponseBuilder, InteractionHandle};
 //! # use std::sync::Arc;
 //! # use std::time::Duration;
-//! # use sparkle_interactions::{builder::InteractionResponseBuilder, InteractionHandle};
 //! # use twilight_http::Client;
 //! # use twilight_model::{
 //! #     application::interaction::{Interaction, InteractionType},
@@ -16,7 +17,7 @@
 //! #     id::Id,
 //! # };
 //! #
-//! # async fn foo() {
+//! # async fn example() -> Result<()> {
 //! # let interaction = Interaction {
 //! #     app_permissions: None,
 //! #     application_id: Id::new(1),
@@ -74,10 +75,13 @@
 //!     .await?;
 //! // followup message is created here
 //!
-//! handle.update_last(InteractionResponseBuilder::send_message(
-//!     response_data.clone(),
-//! ))
+//! handle
+//!     .update_last(InteractionResponseBuilder::send_message(
+//!         response_data.clone(),
+//!     ))
+//!     .await?;
 //! // followup message is updated here
+//! # Ok(())
 //! # }
 //! ```
 
