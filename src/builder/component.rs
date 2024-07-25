@@ -349,6 +349,12 @@ pub struct ComponentsBuilder {
     action_rows: Vec<ActionRow>,
 }
 
+impl Default for ComponentsBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ComponentsBuilder {
     /// Create a new builder for components.
     #[must_use]
