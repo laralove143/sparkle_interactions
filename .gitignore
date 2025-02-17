@@ -1,7 +1,8 @@
 .clj-kondo
 .DS_Store
 .env
+.idea
 .lsp
-/.idea
-/target
+.vscode
 Cargo.lock
+target
