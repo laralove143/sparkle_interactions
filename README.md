@@ -1,4 +1,3 @@
-<!--suppress HtmlDeprecatedAttribute -->
 <div align="center">
    <a href="https://github.com/laralove143/sparkle_interactions/issues">
       <img alt="Stars Badge" height="20" src="https://m3-markdown-badges.vercel.app/stars/2/1/laralove143/sparkle_interactions"/>
@@ -39,15 +38,13 @@ Safe, concise Discord interaction handling for [Twilight](https://api.twilight.r
 
 An interaction handle is provided to respond to interactions, which holds the state of the interaction.
 
-The handle has a `respond` method which determines whether to create an interaction response or a followup message using
-the state.
+The handle has a `respond` method which determines whether to create an interaction response or a followup message using the state.
 
 See module documentation of `handle` module for more.
 
 ### Tracking Last Response
 
-Optionally, the interaction handle can track the last message sent.
-Methods are then provided to return or update the last message.
+Optionally, the interaction handle can track the last message sent. Methods are then provided to return or update the last message.
 
 See module documentation of `handle` module for more.
 
@@ -59,41 +56,32 @@ See module documentation of the `extract` module for more.
 
 ### Builders
 
-Builders for components and interaction responses are given by the library, allowing you to create these structs
-concisely and safely.
+Builders for components and interaction responses are given by the library, allowing you to create these structs concisely and safely.
 
 See module documentation of the `builder` module for more.
 
 ## 🏷️ Versioning
 
-Since this crate is a third party crate for Twilight, its minor version follows the minor version of Twilight that this
-crate supports.
+Since this crate is a third party crate for Twilight, its minor version follows the minor version of Twilight that this crate supports.
 
-For example, for a version of the crate that supports Twilight `0.15.4`, this crate's version will
-be `0.15.x`, where `x` can be any number.
+For example, for a version of the crate that supports Twilight `0.15.4`, this crate's version will be `0.15.x`, where `x` can be any number.
 
 ## 🧪 Testing
 
-This crate makes use of unit tests and integration tests. Unit tests can be run as usual, while integration tests
-require some setup.
+This crate makes use of unit tests and integration tests. Unit tests can be run as usual, while integration tests require some setup.
 
-Since integration tests receive Discord events and make requests to Discord, you should first set these environment
-variables in a `.env` file located in the root of this repository:
+Since integration tests receive Discord events and make requests to Discord, you should first set these environment variables in a `.env` file located in the root of this repository:
 
 - `BOT_TOKEN`: The token of the bot to use for testing
 - `GUILD_ID`: The ID of the server where the test command will be created
 - `CHANNEL_ID`: The ID of the channel where the test message with a component will be created
 
-Each test runs on an interaction.
-Since bots can't create interactions, when running the test, the bot will wait for
-an `InteractionCreate` event to use for testing.
-For tests that don't run on component interactions, you should first run the test then send
-the `sparkle_interactions_test` command manually, after which point the bot runs the test on the interaction you
-created.
-For tests that run on component interactions, the bot will send a message with the component upon running the test. Once
-you click on the component, testing will continue.
+Each test runs on an interaction. Since bots can't create interactions, when running the test, the bot will wait for an `InteractionCreate` event to use for testing.
+
+For tests that don't run on component interactions, you should first run the test then send the `sparkle_interactions_test` command manually after which point the bot runs the test on the interaction you created.
+
+For tests that run on component interactions, the bot will send a message with the component upon running the test. Once you click on the component, testing will continue.
 
 ## 🙋 Wanted: Issues
 
-While this crate is tested heavily, there may still be some bugs; or you might have some awesome ideas.
-Please to create issues or PRs for bug reports, suggestions, and additions.
+While this crate is tested heavily, there may still be some bugs; or you might have some awesome ideas. Please to create issues or PRs for bug reports, suggestions, and additions.
