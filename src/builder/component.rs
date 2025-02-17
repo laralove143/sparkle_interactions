@@ -9,20 +9,28 @@
 //! [`InteractionResponseBuilder::show_modal`].
 
 use twilight_model::{
-    channel::message::{
-        Component,
-        ReactionType,
-        component::{
-            ActionRow,
-            Button,
-            ButtonStyle,
-            SelectMenu,
-            SelectMenuOption,
-            TextInput,
-            TextInputStyle,
+    channel::{
+        ChannelType,
+        message::{
+            Component,
+            EmojiReactionType,
+            component::{
+                ActionRow,
+                Button,
+                ButtonStyle,
+                SelectDefaultValue,
+                SelectMenu,
+                SelectMenuOption,
+                SelectMenuType,
+                TextInput,
+                TextInputStyle,
+            },
         },
     },
-    id::{Id, marker::EmojiMarker},
+    id::{
+        Id,
+        marker::{EmojiMarker, SkuMarker},
+    },
 };
 
 #[cfg(doc)]
@@ -33,8 +41,9 @@ use crate::builder::InteractionResponseBuilder;
 pub struct ButtonBuilder {
     custom_id: Option<String>,
     disabled: bool,
-    emoji: Option<ReactionType>,
+    emoji: Option<EmojiReactionType>,
     label: Option<String>,
+    sku_id: Option<Id<SkuMarker>>,
     style: ButtonStyle,
     url: Option<String>,
 }
@@ -48,19 +57,23 @@ impl ButtonBuilder {
             disabled: self.disabled,
             emoji: self.emoji,
             label: self.label,
+            sku_id: self.sku_id,
             style: self.style,
             url: self.url,
         }
     }
 
     /// Set a custom emoji for this button.
+    ///
+    /// This is unavailable for buttons with a SKU ID.
     #[must_use]
-    pub fn custom_emoji(mut self, name: String, id: Id<EmojiMarker>, animated: bool) -> Self {
-        self.emoji = Some(ReactionType::Custom {
-            animated,
-            id,
-            name: Some(name),
-        });
+    pub fn custom_emoji(
+        mut self,
+        name: Option<String>,
+        id: Id<EmojiMarker>,
+        animated: bool,
+    ) -> Self {
+        self.emoji = Some(EmojiReactionType::Custom { animated, id, name });
 
         self
     }
@@ -74,14 +87,16 @@ impl ButtonBuilder {
     }
 
     /// Set a unicode emoji for this button.
+    ///
+    /// This is unavailable for buttons with a SKU ID.
     #[must_use]
     pub fn unicode_emoji(mut self, emoji: String) -> Self {
-        self.emoji = Some(ReactionType::Unicode { name: emoji });
+        self.emoji = Some(EmojiReactionType::Unicode { name: emoji });
 
         self
     }
 
-    /// Create a new builder for buttons with a given custom ID.
+    /// Create a new builder for a button with a given custom ID.
     #[must_use]
     pub const fn with_custom_id(custom_id: String, label: String, style: ButtonStyle) -> Self {
         Self {
@@ -89,12 +104,27 @@ impl ButtonBuilder {
             disabled: false,
             emoji: None,
             label: Some(label),
+            sku_id: None,
             style,
             url: None,
         }
     }
 
-    /// Create a new builder for buttons with a given URL.
+    /// Create a new builder for a button with [`ButtonStyle::Premium`].
+    #[must_use]
+    pub const fn with_sku_id(sku_id: Id<SkuMarker>) -> Self {
+        Self {
+            custom_id: None,
+            disabled: false,
+            emoji: None,
+            label: None,
+            sku_id: Some(sku_id),
+            style: ButtonStyle::Premium,
+            url: None,
+        }
+    }
+
+    /// Create a new builder for a button with [`ButtonStyle::Link`].
     #[must_use]
     pub const fn with_url(url: String, label: String) -> Self {
         Self {
@@ -102,6 +132,7 @@ impl ButtonBuilder {
             disabled: false,
             emoji: None,
             label: Some(label),
+            sku_id: None,
             style: ButtonStyle::Link,
             url: Some(url),
         }
@@ -164,11 +195,14 @@ impl Default for ComponentsBuilder {
 /// Create a [`SelectMenu`] with a builder.
 #[derive(Clone, Eq, PartialEq, Hash, Debug)]
 pub struct SelectMenuBuilder {
+    channel_types: Option<Vec<ChannelType>>,
     custom_id: String,
+    default_values: Option<Vec<SelectDefaultValue>>,
     disabled: bool,
+    kind: SelectMenuType,
     max_values: Option<u8>,
     min_values: Option<u8>,
-    options: Vec<SelectMenuOption>,
+    options: Option<Vec<SelectMenuOption>>,
     placeholder: Option<String>,
 }
 
@@ -177,13 +211,26 @@ impl SelectMenuBuilder {
     #[must_use]
     pub fn build(self) -> SelectMenu {
         SelectMenu {
+            channel_types: self.channel_types,
             custom_id: self.custom_id,
             disabled: self.disabled,
+            default_values: self.default_values,
+            kind: self.kind,
             max_values: self.max_values,
             min_values: self.min_values,
             options: self.options,
             placeholder: self.placeholder,
         }
+    }
+
+    /// Set the default values for this select menu.
+    ///
+    /// This is not available for [`SelectMenuType::Text`].
+    #[must_use]
+    pub fn default_values(mut self, default_values: Vec<SelectDefaultValue>) -> Self {
+        self.default_values = Some(default_values);
+
+        self
     }
 
     /// Make this select menu disabled.
@@ -212,25 +259,66 @@ impl SelectMenuBuilder {
         self
     }
 
-    /// Create a new builder for select menus.
-    #[must_use]
-    pub const fn new(custom_id: String, options: Vec<SelectMenuOption>) -> Self {
-        Self {
-            custom_id,
-            disabled: false,
-            max_values: None,
-            min_values: None,
-            options,
-            placeholder: None,
-        }
-    }
-
     /// Set the text to be shown when no options are selected.
     #[must_use]
     pub fn placeholder(mut self, placeholder: String) -> Self {
         self.placeholder = Some(placeholder);
 
         self
+    }
+
+    /// Create a new builder for a select menu of [`SelectMenuType::Channel`].
+    #[must_use]
+    pub const fn with_channel_types(
+        custom_id: String,
+        channel_types: Option<Vec<ChannelType>>,
+    ) -> Self {
+        Self {
+            channel_types,
+            custom_id,
+            disabled: false,
+            default_values: None,
+            kind: SelectMenuType::Channel,
+            max_values: None,
+            min_values: None,
+            options: None,
+            placeholder: None,
+        }
+    }
+
+    /// Create a new builder for a select menu of a given [`SelectMenuType`].
+    ///
+    /// Prefer [`Self::with_options`] for [`SelectMenuType::Text`] and
+    /// [`Self::with_channel_types`] for [`SelectMenuType::Channel`].
+    #[must_use]
+    pub const fn with_kind(custom_id: String, kind: SelectMenuType) -> Self {
+        Self {
+            channel_types: None,
+            custom_id,
+            disabled: false,
+            default_values: None,
+            kind,
+            max_values: None,
+            min_values: None,
+            options: None,
+            placeholder: None,
+        }
+    }
+
+    /// Create a new builder for a select menu of [`SelectMenuType::Text`].
+    #[must_use]
+    pub const fn with_options(custom_id: String, options: Vec<SelectMenuOption>) -> Self {
+        Self {
+            channel_types: None,
+            custom_id,
+            disabled: false,
+            default_values: None,
+            kind: SelectMenuType::Text,
+            max_values: None,
+            min_values: None,
+            options: Some(options),
+            placeholder: None,
+        }
     }
 }
 
@@ -239,7 +327,7 @@ impl SelectMenuBuilder {
 pub struct SelectMenuOptionBuilder {
     default: bool,
     description: Option<String>,
-    emoji: Option<ReactionType>,
+    emoji: Option<EmojiReactionType>,
     label: String,
     value: String,
 }
@@ -260,7 +348,7 @@ impl SelectMenuOptionBuilder {
     /// Set a custom emoji for this select menu option.
     #[must_use]
     pub fn custom_emoji(mut self, name: String, id: Id<EmojiMarker>, animated: bool) -> Self {
-        self.emoji = Some(ReactionType::Custom {
+        self.emoji = Some(EmojiReactionType::Custom {
             animated,
             id,
             name: Some(name),
@@ -300,7 +388,7 @@ impl SelectMenuOptionBuilder {
     /// Set a unicode emoji for this select menu option.
     #[must_use]
     pub fn unicode_emoji(mut self, emoji: String) -> Self {
-        self.emoji = Some(ReactionType::Unicode { name: emoji });
+        self.emoji = Some(EmojiReactionType::Unicode { name: emoji });
 
         self
     }

@@ -44,7 +44,7 @@ impl ExtractInteractionData for InteractionData {
 
     fn component_data(self) -> Option<MessageComponentInteractionData> {
         if let Self::MessageComponent(data) = self {
-            Some(data)
+            Some(*data)
         } else {
             None
         }

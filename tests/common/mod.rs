@@ -5,7 +5,7 @@ use sparkle_interactions::{
     InteractionHandle,
     builder::component::{ButtonBuilder, ComponentsBuilder},
 };
-use twilight_gateway::{Intents, Shard};
+use twilight_gateway::{EventTypeFlags, Intents, Shard, StreamExt};
 use twilight_http::Client;
 use twilight_model::{
     application::command::CommandType,
@@ -48,9 +48,12 @@ pub(crate) async fn interaction_handle() -> Result<InteractionHandle, anyhow::Er
     );
 
     loop {
-        let event_res = shard.next_event().await;
+        let event = shard
+            .next_event(EventTypeFlags::INTERACTION_CREATE)
+            .await
+            .unwrap()?;
 
-        if let Event::InteractionCreate(interaction) = event_res? {
+        if let Event::InteractionCreate(interaction) = event {
             return Ok(InteractionHandle::new(
                 Arc::new(client),
                 application_id,
@@ -73,7 +76,7 @@ pub(crate) async fn send_component_message() -> Result<(), anyhow::Error> {
         .create_message(env::var("CHANNEL_ID")?.parse()?)
         .embeds(&[progress_embed()
             .description("Click on the button to continue.")
-            .build()])?
+            .build()])
         .components(
             &ComponentsBuilder::new()
                 .buttons(vec![
@@ -86,7 +89,7 @@ pub(crate) async fn send_component_message() -> Result<(), anyhow::Error> {
                     .build(),
                 ])
                 .build(),
-        )?
+        )
         .await?;
 
     Ok(())

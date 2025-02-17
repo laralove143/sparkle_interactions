@@ -53,15 +53,21 @@
 //! #         },
 //! #     },
 //! #     id::Id,
+//! #     oauth::ApplicationIntegrationMap,
 //! # };
 //! #
 //! # fn example() -> Option<()> {
 //! # let interaction = Interaction {
 //! #     app_permissions: None,
 //! #     application_id: Id::new(1),
+//! #     authorizing_integration_owners: ApplicationIntegrationMap {
+//! #         guild: None,
+//! #         user: None,
+//! #     },
 //! #     channel: None,
-//! #     #[allow(deprecated)]
+//! #     #[expect(deprecated)]
 //! #     channel_id: None,
+//! #     context: None,
 //! #     data: Some(InteractionData::ApplicationCommand(Box::new(CommandData {
 //! #         guild_id: None,
 //! #         id: Id::new(1),
@@ -80,6 +86,8 @@
 //! #         resolved: None,
 //! #         target_id: None,
 //! #     }))),
+//! #     entitlements: Vec::new(),
+//! #     guild: None,
 //! #     guild_id: None,
 //! #     guild_locale: None,
 //! #     id: Id::new(1),
@@ -113,6 +121,7 @@
 //! #     },
 //! #     channel::message::component::ComponentType,
 //! #     id::Id,
+//! #     oauth::ApplicationIntegrationMap,
 //! # };
 //! # use sparkle_interactions::extract::ExtractInteractionData;
 //! #
@@ -120,16 +129,24 @@
 //! # let interaction = Interaction {
 //! #     app_permissions: None,
 //! #     application_id: Id::new(1),
+//! #     authorizing_integration_owners: ApplicationIntegrationMap {
+//! #         guild: None,
+//! #         user: None,
+//! #     },
 //! #     channel: None,
-//! #     #[allow(deprecated)]
+//! #     #[expect(deprecated)]
 //! #     channel_id: None,
-//! #     data: Some(InteractionData::MessageComponent(
+//! #     context: None,
+//! #     data: Some(InteractionData::MessageComponent(Box::new(
 //! #         MessageComponentInteractionData {
 //! #             custom_id: "a".to_owned(),
-//! #             component_type: ComponentType::SelectMenu,
+//! #             component_type: ComponentType::TextSelectMenu,
+//! #             resolved: None,
 //! #             values: vec!["Rust".to_owned(), "C++".to_owned(), "C".to_owned()],
 //! #         },
-//! #     )),
+//! #     ))),
+//! #     entitlements: Vec::new(),
+//! #     guild: None,
 //! #     guild_id: None,
 //! #     guild_locale: None,
 //! #     id: Id::new(1),
@@ -158,6 +175,7 @@
 //! # };
 //! # use twilight_model::{
 //! #     application::interaction::{
+//! #         message_component::MessageComponentInteractionData,
 //! #         modal::{
 //! #             ModalInteractionData, ModalInteractionDataActionRow,
 //! #              ModalInteractionDataComponent,
@@ -166,29 +184,35 @@
 //! #     },
 //! #     channel::message::component::ComponentType,
 //! #     id::Id,
+//! #     oauth::ApplicationIntegrationMap,
 //! # };
 //! #
 //! # fn example() -> Option<()> {
 //! # let interaction = Interaction {
 //! #     app_permissions: None,
 //! #     application_id: Id::new(1),
+//! #     authorizing_integration_owners: ApplicationIntegrationMap {
+//! #         guild: None,
+//! #         user: None,
+//! #     },
 //! #     channel: None,
-//! #     #[allow(deprecated)]
+//! #     #[expect(deprecated)]
 //! #     channel_id: None,
-//! #     data: Some(InteractionData::ModalSubmit(ModalInteractionData {
-//! #         components: vec![ModalInteractionDataActionRow {
-//! #             components: vec![ModalInteractionDataComponent {
-//! #                 custom_id: "name_surname".to_owned(),
-//! #                 kind: ComponentType::TextInput,
-//! #                 value: Some("a".to_owned()),
-//! #             }],
-//! #         }],
-//! #         custom_id: "".to_string(),
-//! #     })),
+//! #     context: None,
+//! #     data: Some(InteractionData::MessageComponent(Box::new(
+//! #         MessageComponentInteractionData {
+//! #             custom_id: "a".to_owned(),
+//! #             component_type: ComponentType::TextSelectMenu,
+//! #             resolved: None,
+//! #             values: vec!["Rust".to_owned(), "C++".to_owned(), "C".to_owned()],
+//! #         },
+//! #     ))),
+//! #     entitlements: Vec::new(),
+//! #     guild: None,
 //! #     guild_id: None,
 //! #     guild_locale: None,
 //! #     id: Id::new(1),
-//! #     kind: InteractionType::ModalSubmit,
+//! #     kind: InteractionType::MessageComponent,
 //! #     locale: None,
 //! #     member: None,
 //! #     message: None,

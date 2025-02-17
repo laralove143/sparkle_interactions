@@ -8,28 +8,23 @@ keywords = ["discord", "discord-api", "twilight"]
 license = "MIT"
 name = "sparkle_interactions"
 repository = "https://github.com/laralove143/sparkle_interactions"
-version = "0.15.3"
+version = "0.16.0"
 
 [dependencies]
 tokio = { version = "1.37", features = [
     "time",
 ], default-features = false, optional = true }
-twilight-http = { version = "0.15", default-features = false }
-twilight-model = "0.15"
-twilight-validate = "0.15"
+twilight-http = { version = "0.16", default-features = false }
+twilight-model = "0.16"
+twilight-validate = "0.16"
 
 [dev-dependencies]
 anyhow = "1.0"
 dotenvy = { version = "0.15" }
 tokio = { version = "1.37", features = ["macros", "rt-multi-thread"] }
-twilight-gateway = "0.15"
-twilight-http = { version = "0.15", features = [
-    "decompression",
-    "rustls-webpki-roots",
-    "simd-json",
-    "trust-dns",
-] }
-twilight-util = { version = "0.15", features = ["builder"] }
+twilight-gateway = "0.16"
+twilight-http = "0.16"
+twilight-util = { version = "0.16", features = ["builder"] }
 
 [features]
 respond_on_delay = ["dep:tokio"]

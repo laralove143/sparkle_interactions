@@ -15,16 +15,24 @@
 //! #     application::interaction::{Interaction, InteractionType},
 //! #     http::interaction::InteractionResponseData,
 //! #     id::Id,
+//! #     oauth::ApplicationIntegrationMap,
 //! # };
 //! #
 //! # async fn example() -> Result<()> {
 //! # let interaction = Interaction {
 //! #     app_permissions: None,
 //! #     application_id: Id::new(1),
+//! #     authorizing_integration_owners: ApplicationIntegrationMap {
+//! #         guild: None,
+//! #         user: None,
+//! #     },
 //! #     channel: None,
-//! #     #[allow(deprecated)]
+//! #     #[expect(deprecated)]
 //! #     channel_id: None,
+//! #     context: None,
 //! #     data: None,
+//! #     entitlements: Vec::new(),
+//! #     guild: None,
 //! #     guild_id: None,
 //! #     guild_locale: None,
 //! #     id: Id::new(1),
@@ -234,19 +242,19 @@ impl InteractionHandle {
         };
 
         if let Some(attachments) = &data.attachments {
-            create_followup = create_followup.attachments(attachments)?;
+            create_followup = create_followup.attachments(attachments);
         }
 
         if let Some(components) = &data.components {
-            create_followup = create_followup.components(components)?;
+            create_followup = create_followup.components(components);
         }
 
         if let Some(content) = &data.content {
-            create_followup = create_followup.content(content)?;
+            create_followup = create_followup.content(content);
         }
 
         if let Some(embeds) = &data.embeds {
-            create_followup = create_followup.embeds(embeds)?;
+            create_followup = create_followup.embeds(embeds);
         }
 
         if let Some(flags) = data.flags {
@@ -445,12 +453,12 @@ impl InteractionHandle {
             };
 
             if let Some(attachments) = &data.attachments {
-                update_followup = update_followup.attachments(attachments)?;
+                update_followup = update_followup.attachments(attachments);
             }
 
-            update_followup = update_followup.components(data.components.as_deref())?;
-            update_followup = update_followup.content(data.content.as_deref())?;
-            update_followup = update_followup.embeds(data.embeds.as_deref())?;
+            update_followup = update_followup.components(data.components.as_deref());
+            update_followup = update_followup.content(data.content.as_deref());
+            update_followup = update_followup.embeds(data.embeds.as_deref());
 
             Ok(Some(update_followup.await?))
         } else {
