@@ -85,24 +85,30 @@
 //! # }
 //! ```
 
+#[cfg(test)]
+mod tests;
+
 use std::{
-    fmt::{Display, Formatter},
+    error,
+    fmt::{self, Display, Formatter},
     sync::{
-        atomic::{AtomicBool, AtomicU64, Ordering},
         Arc,
+        atomic::{AtomicBool, AtomicU64, Ordering},
     },
 };
 
-use twilight_http::{client::InteractionClient, response::DeserializeBodyError, Client, Response};
+use twilight_http::{Client, Response, client::InteractionClient, response::DeserializeBodyError};
 use twilight_model::{
     channel::Message,
     http::interaction::InteractionResponse,
     id::{
-        marker::{ApplicationMarker, InteractionMarker, MessageMarker},
         Id,
+        marker::{ApplicationMarker, InteractionMarker, MessageMarker},
     },
 };
 use twilight_validate::message::MessageValidationError;
+#[cfg(feature = "respond_on_delay")]
+use {std::time::Duration, tokio::time::sleep};
 
 #[cfg(doc)]
 use crate::builder::InteractionResponseBuilder;
@@ -114,14 +120,18 @@ pub enum Error {
     DeserializeBody(DeserializeBodyError),
     /// An error was returned by [`twilight_http`]
     Http(twilight_http::Error),
-    /// A [`MessageValidationError`] was returned
-    MessageValidation(MessageValidationError),
     /// Tried to return the last message when it isn't tracked
     LastMessageNotTracked,
+    /// A [`MessageValidationError`] was returned
+    MessageValidation(MessageValidationError),
 }
 
 impl Display for Error {
-    fn fmt(&self, #[allow(clippy::min_ident_chars)] f: &mut Formatter<'_>) -> std::fmt::Result {
+    #[expect(
+        clippy::min_ident_chars,
+        reason = "identifier is the default for trait"
+    )]
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
             Self::DeserializeBody(err) => err.fmt(f),
             Self::Http(err) => err.fmt(f),
@@ -151,17 +161,17 @@ impl From<MessageValidationError> for Error {
     }
 }
 
-impl std::error::Error for Error {}
+impl error::Error for Error {}
 
 /// Response returned from responding to an interaction
 #[derive(Debug)]
 pub enum FollowupResponse {
     /// The response is already deserialized
     Deserialized(Message),
-    /// The response is not deserialized
-    NotDeserialized(Response<Message>),
     /// The response is empty
     None,
+    /// The response is not deserialized
+    NotDeserialized(Response<Message>),
 }
 
 impl FollowupResponse {
@@ -196,15 +206,85 @@ pub struct InteractionHandle {
     application_id: Id<ApplicationMarker>,
     client: Arc<Client>,
     id: Id<InteractionMarker>,
-    token: String,
+    is_last_message_tracked: bool,
     is_responded: Arc<AtomicBool>,
     last_message_id: Arc<AtomicU64>,
-    is_last_message_tracked: bool,
+    token: String,
 }
 
 impl InteractionHandle {
     const LOAD_ORDERING: Ordering = Ordering::Acquire;
     const STORE_ORDERING: Ordering = Ordering::Release;
+
+    /// Return the [`InteractionClient`] for this handle.
+    #[must_use]
+    pub fn client(&self) -> InteractionClient<'_> {
+        self.client.interaction(self.application_id)
+    }
+
+    async fn create_followup(
+        &self,
+        response: InteractionResponse,
+    ) -> Result<Response<Message>, Error> {
+        let interaction_client = self.client();
+        let mut create_followup = interaction_client.create_followup(&self.token);
+
+        let Some(data) = response.data else {
+            return Ok(create_followup.await?);
+        };
+
+        if let Some(attachments) = &data.attachments {
+            create_followup = create_followup.attachments(attachments)?;
+        }
+
+        if let Some(components) = &data.components {
+            create_followup = create_followup.components(components)?;
+        }
+
+        if let Some(content) = &data.content {
+            create_followup = create_followup.content(content)?;
+        }
+
+        if let Some(embeds) = &data.embeds {
+            create_followup = create_followup.embeds(embeds)?;
+        }
+
+        if let Some(flags) = data.flags {
+            create_followup = create_followup.flags(flags);
+        }
+
+        if let Some(tts) = data.tts {
+            create_followup = create_followup.tts(tts);
+        }
+
+        Ok(create_followup.await?)
+    }
+
+    fn is_responded(&self) -> bool {
+        self.is_responded.load(Self::LOAD_ORDERING)
+    }
+
+    /// Return the last followup message sent to the interaction.
+    ///
+    /// Returns `None` if no followup message has been sent yet.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::LastMessageNotTracked`] if
+    /// [`InteractionHandle::track_last_message`] wasn't called before.
+    pub fn last_message_id(&self) -> Result<Option<Id<MessageMarker>>, Error> {
+        if !self.is_last_message_tracked {
+            return Err(Error::LastMessageNotTracked);
+        }
+
+        let message_id = self.last_message_id.load(Self::LOAD_ORDERING);
+
+        if message_id == 0 {
+            Ok(None)
+        } else {
+            Ok(Some(Id::new(message_id)))
+        }
+    }
 
     /// Create a new handle for an interaction
     ///
@@ -228,64 +308,6 @@ impl InteractionHandle {
             last_message_id: Arc::new(AtomicU64::new(0)),
             is_last_message_tracked: false,
         }
-    }
-
-    /// Set the handle to track the last message to be able to use
-    /// [`InteractionHandle::update_last`] and
-    /// [`InteractionHandle::last_message_id`]
-    ///
-    /// This makes [`InteractionHandle::respond`] deserialize every request.
-    ///
-    /// # Warning
-    ///
-    /// This must be called before any method except [`InteractionHandle::new`]
-    /// is called.
-    #[must_use]
-    pub const fn track_last_message(mut self) -> Self {
-        self.is_last_message_tracked = true;
-        self
-    }
-
-    /// Return the [`InteractionClient`] for this handle.
-    #[must_use]
-    pub fn client(&self) -> InteractionClient<'_> {
-        self.client.interaction(self.application_id)
-    }
-
-    /// Send a response if no other response has been sent in the given timeout
-    /// period
-    ///
-    /// This can be used to defer interactions if they aren't responded to
-    /// within the 3-second period Discord allows for the first response.
-    /// The response can be a defer response or a custom response.
-    ///
-    /// # Warnings
-    ///
-    /// This must be called as soon as possible after an `InteractionCreate`
-    /// event was received to ensure the accuracy of the wait-period.
-    ///
-    /// Due to complexities involving error handling in a non-blocking method,
-    /// if sending the response fails, it is ignored.
-    /// Though, if an error did occur, it can be detected in a later response to
-    /// the interaction.
-    #[cfg(feature = "respond_on_delay")]
-    #[must_use]
-    pub fn respond_on_delay(
-        self,
-        response: InteractionResponse,
-        delay: std::time::Duration,
-    ) -> Self {
-        let handle = self.clone();
-
-        tokio::spawn(async move {
-            tokio::time::sleep(delay).await;
-
-            if !self.is_responded() {
-                drop(self.respond(response).await);
-            }
-        });
-
-        handle
     }
 
     /// Respond to the interaction with the given response.
@@ -335,6 +357,62 @@ impl InteractionHandle {
         }
     }
 
+    /// Send a response if no other response has been sent in the given timeout
+    /// period
+    ///
+    /// This can be used to defer interactions if they aren't responded to
+    /// within the 3-second period Discord allows for the first response.
+    /// The response can be a defer response or a custom response.
+    ///
+    /// # Warnings
+    ///
+    /// This must be called as soon as possible after an `InteractionCreate`
+    /// event was received to ensure the accuracy of the wait-period.
+    ///
+    /// Due to complexities involving error handling in a non-blocking method,
+    /// if sending the response fails, it is ignored.
+    /// Though, if an error did occur, it can be detected in a later response to
+    /// the interaction.
+    #[cfg(feature = "respond_on_delay")]
+    #[must_use]
+    pub fn respond_on_delay(self, response: InteractionResponse, delay: Duration) -> Self {
+        let handle = self.clone();
+
+        tokio::spawn(async move {
+            sleep(delay).await;
+
+            if !self.is_responded() {
+                drop(self.respond(response).await);
+            }
+        });
+
+        handle
+    }
+
+    fn set_is_responded(&self, value: bool) {
+        self.is_responded.store(value, Self::STORE_ORDERING);
+    }
+
+    fn set_last_message_id(&self, value: u64) {
+        self.last_message_id.store(value, Self::STORE_ORDERING);
+    }
+
+    /// Set the handle to track the last message to be able to use
+    /// [`InteractionHandle::update_last`] and
+    /// [`InteractionHandle::last_message_id`]
+    ///
+    /// This makes [`InteractionHandle::respond`] deserialize every request.
+    ///
+    /// # Warning
+    ///
+    /// This must be called before any method except [`InteractionHandle::new`]
+    /// is called.
+    #[must_use]
+    pub const fn track_last_message(mut self) -> Self {
+        self.is_last_message_tracked = true;
+        self
+    }
+
     /// Update the last response to the interaction
     ///
     /// If no earlier response has been sent, this creates a new response and
@@ -379,99 +457,5 @@ impl InteractionHandle {
             self.respond(response).await?;
             Ok(None)
         }
-    }
-
-    /// Return the last followup message sent to the interaction.
-    ///
-    /// Returns `None` if no followup message has been sent yet.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`Error::LastMessageNotTracked`] if
-    /// [`InteractionHandle::track_last_message`] wasn't called before.
-    pub fn last_message_id(&self) -> Result<Option<Id<MessageMarker>>, Error> {
-        if !self.is_last_message_tracked {
-            return Err(Error::LastMessageNotTracked);
-        }
-
-        let message_id = self.last_message_id.load(Self::LOAD_ORDERING);
-
-        if message_id == 0 {
-            Ok(None)
-        } else {
-            Ok(Some(Id::new(message_id)))
-        }
-    }
-
-    async fn create_followup(
-        &self,
-        response: InteractionResponse,
-    ) -> Result<Response<Message>, Error> {
-        let interaction_client = self.client();
-        let mut create_followup = interaction_client.create_followup(&self.token);
-
-        let Some(data) = response.data else {
-            return Ok(create_followup.await?);
-        };
-
-        if let Some(attachments) = &data.attachments {
-            create_followup = create_followup.attachments(attachments)?;
-        }
-
-        if let Some(components) = &data.components {
-            create_followup = create_followup.components(components)?;
-        }
-
-        if let Some(content) = &data.content {
-            create_followup = create_followup.content(content)?;
-        }
-
-        if let Some(embeds) = &data.embeds {
-            create_followup = create_followup.embeds(embeds)?;
-        }
-
-        if let Some(flags) = data.flags {
-            create_followup = create_followup.flags(flags);
-        }
-
-        if let Some(tts) = data.tts {
-            create_followup = create_followup.tts(tts);
-        }
-
-        Ok(create_followup.await?)
-    }
-
-    fn is_responded(&self) -> bool {
-        self.is_responded.load(Self::LOAD_ORDERING)
-    }
-
-    fn set_is_responded(&self, value: bool) {
-        self.is_responded.store(value, Self::STORE_ORDERING);
-    }
-
-    fn set_last_message_id(&self, value: u64) {
-        self.last_message_id.store(value, Self::STORE_ORDERING);
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use std::sync::Arc;
-
-    use twilight_http::Client;
-    use twilight_model::id::Id;
-
-    use crate::InteractionHandle;
-
-    #[test]
-    fn test_data_integrity() {
-        let client = Client::new("a".to_owned());
-        let handle =
-            InteractionHandle::new(Arc::new(client), Id::new(1), Id::new(1), "a".to_owned());
-        #[allow(clippy::redundant_clone)]
-        let handle_clone = handle.clone();
-
-        handle.set_is_responded(true);
-        assert_eq!(handle.is_responded(), handle_clone.is_responded());
     }
 }

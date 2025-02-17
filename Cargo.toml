@@ -1,21 +1,51 @@
 [package]
-name = "sparkle_interactions"
-version = "0.15.3"
-edition = "2021"
 authors = ["Lara Kayaalp <me@lara.lv>"]
+categories = ["parsing"]
 description = "Safe, concise Discord interaction handling for Twilight"
 documentation = "https://docs.rs/sparkle_interactions"
-repository = "https://github.com/laralove143/sparkle_interactions"
-license = "MIT"
+edition = "2021"
 keywords = ["discord", "discord-api", "twilight"]
-categories = ["parsing"]
+license = "MIT"
+name = "sparkle_interactions"
+repository = "https://github.com/laralove143/sparkle_interactions"
+version = "0.15.3"
+
+[dependencies]
+tokio = { version = "1.37", features = [
+    "time",
+], default-features = false, optional = true }
+twilight-http = { version = "0.15", default-features = false }
+twilight-model = "0.15"
+twilight-validate = "0.15"
+
+[dev-dependencies]
+anyhow = "1.0"
+dotenvy = { version = "0.15" }
+tokio = { version = "1.37", features = ["macros", "rt-multi-thread"] }
+twilight-gateway = "0.15"
+twilight-http = { version = "0.15", features = [
+    "decompression",
+    "rustls-webpki-roots",
+    "simd-json",
+    "trust-dns",
+] }
+twilight-util = { version = "0.15", features = ["builder"] }
+
+[features]
+respond_on_delay = ["dep:tokio"]
 
 [lints.rust]
 absolute-paths-not-starting-with-crate = "warn"
+ambiguous-negative-literals = "warn"
+deprecated-safe-2024 = "warn"
+edition-2024-expr-fragment-specifier = "warn"
 elided-lifetimes-in-paths = "warn"
 explicit-outlives-requirements = "warn"
 ffi-unwind-calls = "warn"
+impl-trait-overcaptures = "warn"
 keyword-idents = "warn"
+keyword-idents-2018 = "warn"
+keyword-idents-2024 = "warn"
 let-underscore-drop = "warn"
 macro-use-extern-crate = "warn"
 meta-variable-misuse = "warn"
@@ -23,18 +53,29 @@ missing-abi = "warn"
 missing-copy-implementations = "warn"
 missing-debug-implementations = "warn"
 missing-docs = "warn"
+missing-unsafe-on-extern = "warn"
 non-ascii-idents = "warn"
+redundant-imports = "warn"
+redundant-lifetimes = "warn"
+rust-2021-incompatible-closure-captures = "warn"
 rust-2021-incompatible-or-patterns = "warn"
 rust-2021-prefixes-incompatible-syntax = "warn"
 rust-2021-prelude-collisions = "warn"
+rust-2024-guarded-string-incompatible-syntax = "warn"
+rust-2024-incompatible-pat = "warn"
+rust-2024-prelude-collisions = "warn"
 single-use-lifetimes = "warn"
+tail-expr-drop-order = "warn"
 trivial-casts = "warn"
 trivial-numeric-casts = "warn"
 unit-bindings = "warn"
+unnameable-types = "warn"
 unreachable-pub = "warn"
+unsafe-attr-outside-unsafe = "warn"
 unsafe-code = "warn"
 unsafe-op-in-unsafe-fn = "warn"
 unstable-features = "warn"
+unused-crate-dependencies = "warn"
 unused-extern-crates = "warn"
 unused-import-braces = "warn"
 unused-lifetimes = "warn"
@@ -43,15 +84,12 @@ unused-qualifications = "warn"
 variant-size-differences = "warn"
 
 [lints.clippy]
-cargo = { level = "warn", priority = -1 }
-nursery = { level = "warn", priority = -1 }
-pedantic = { level = "warn", priority = -1 }
-restriction = { level = "warn", priority = -1 }
-absolute-paths = "allow"
 blanket-clippy-restriction-lints = "allow"
+cargo = { level = "warn", priority = -1 }
 error-impl-error = "allow"
 exhaustive-enums = "allow"
 exhaustive-structs = "allow"
+field-scoped-visibility-modifiers = "allow"
 implicit-return = "allow"
 missing-docs-in-private-items = "allow"
 missing-inline-in-public-items = "allow"
@@ -60,31 +98,22 @@ module-name-repetitions = "allow"
 multiple-crate-versions = "allow"
 multiple-inherent-impl = "allow"
 non-ascii-literal = "allow"
+nursery = { level = "warn", priority = -1 }
 partial-pub-fields = "allow"
 pattern-type-mismatch = "allow"
+pedantic = { level = "warn", priority = -1 }
 print-stderr = "allow"
 print-stdout = "allow"
 pub-use = "allow"
+pub-with-shorthand = "allow"
 question-mark-used = "allow"
+redundant-pub-crate = "allow"
+restriction = { level = "warn", priority = -1 }
 self-named-module-files = "allow"
 single-call-fn = "allow"
 single-char-lifetime-names = "allow"
 std-instead-of-alloc = "allow"
 std-instead-of-core = "allow"
+unused-trait-names = "allow"
+unwrap-used = "allow"
 wildcard-enum-match-arm = "allow"
-
-[dependencies]
-twilight-http = { version = "0.15", default-features = false }
-twilight-model = "0.15"
-twilight-validate = "0.15"
-tokio = { version = "1.37", features = ["time"], default-features = false, optional = true }
-
-[dev-dependencies]
-anyhow = "1.0"
-dotenvy = { version = "0.15" }
-twilight-gateway = "0.15"
-twilight-util = { version = "0.15.4", features = ["builder"] }
-tokio = { version = "1.37", features = ["rt-multi-thread", "macros"] }
-
-[features]
-respond_on_delay = ["dep:tokio"]

@@ -222,9 +222,11 @@
 
 #[cfg(doc)]
 use twilight_model::application::interaction::{
+    Interaction,
+    InteractionData,
+    InteractionType,
     application_command::{CommandData, CommandDataOption, CommandOptionValue},
     modal::ModalInteractionData,
-    Interaction, InteractionData, InteractionType,
 };
 
 mod interaction_data;
@@ -232,6 +234,9 @@ mod modal_component;
 mod option;
 
 pub use interaction_data::ExtractInteractionData;
-#[allow(deprecated)]
+#[expect(
+    deprecated,
+    reason = "deprecated item should be available until next release"
+)]
 pub use modal_component::{ExtractModalComponent, ExtractModalComponentRef};
 pub use option::{ExtractOption, ExtractOptionValue};

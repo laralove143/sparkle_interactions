@@ -10,12 +10,19 @@
 
 use twilight_model::{
     channel::message::{
+        Component,
+        ReactionType,
         component::{
-            ActionRow, Button, ButtonStyle, SelectMenu, SelectMenuOption, TextInput, TextInputStyle,
+            ActionRow,
+            Button,
+            ButtonStyle,
+            SelectMenu,
+            SelectMenuOption,
+            TextInput,
+            TextInputStyle,
         },
-        Component, ReactionType,
     },
-    id::{marker::EmojiMarker, Id},
+    id::{Id, marker::EmojiMarker},
 };
 
 #[cfg(doc)]
@@ -33,6 +40,47 @@ pub struct ButtonBuilder {
 }
 
 impl ButtonBuilder {
+    /// Consume this builder and return the configured [`Button`]
+    #[must_use]
+    pub fn build(self) -> Button {
+        Button {
+            custom_id: self.custom_id,
+            disabled: self.disabled,
+            emoji: self.emoji,
+            label: self.label,
+            style: self.style,
+            url: self.url,
+        }
+    }
+
+    /// Set a custom emoji for this button.
+    #[must_use]
+    pub fn custom_emoji(mut self, name: String, id: Id<EmojiMarker>, animated: bool) -> Self {
+        self.emoji = Some(ReactionType::Custom {
+            animated,
+            id,
+            name: Some(name),
+        });
+
+        self
+    }
+
+    /// Make this button disabled.
+    #[must_use]
+    pub const fn disable(mut self) -> Self {
+        self.disabled = true;
+
+        self
+    }
+
+    /// Set a unicode emoji for this button.
+    #[must_use]
+    pub fn unicode_emoji(mut self, emoji: String) -> Self {
+        self.emoji = Some(ReactionType::Unicode { name: emoji });
+
+        self
+    }
+
     /// Create a new builder for buttons with a given custom ID.
     #[must_use]
     pub const fn with_custom_id(custom_id: String, label: String, style: ButtonStyle) -> Self {
@@ -58,120 +106,58 @@ impl ButtonBuilder {
             url: Some(url),
         }
     }
-
-    /// Make this button disabled.
-    #[must_use]
-    pub const fn disable(mut self) -> Self {
-        self.disabled = true;
-
-        self
-    }
-
-    // noinspection DuplicatedCode
-    /// Set a custom emoji for this button.
-    #[must_use]
-    pub fn custom_emoji(mut self, name: String, id: Id<EmojiMarker>, animated: bool) -> Self {
-        self.emoji = Some(ReactionType::Custom {
-            animated,
-            id,
-            name: Some(name),
-        });
-
-        self
-    }
-
-    /// Set a unicode emoji for this button.
-    #[must_use]
-    pub fn unicode_emoji(mut self, emoji: String) -> Self {
-        self.emoji = Some(ReactionType::Unicode { name: emoji });
-
-        self
-    }
-
-    /// Consume this builder and return the configured [`Button`]
-    #[must_use]
-    pub fn build(self) -> Button {
-        Button {
-            custom_id: self.custom_id,
-            disabled: self.disabled,
-            emoji: self.emoji,
-            label: self.label,
-            style: self.style,
-            url: self.url,
-        }
-    }
 }
 
-/// Create a [`SelectMenuOption`] with a builder.
+/// Create a vector of [`Component`]s with a builder.
 #[derive(Clone, Eq, PartialEq, Hash, Debug)]
-pub struct SelectMenuOptionBuilder {
-    default: bool,
-    description: Option<String>,
-    emoji: Option<ReactionType>,
-    label: String,
-    value: String,
+pub struct ComponentsBuilder {
+    action_rows: Vec<ActionRow>,
 }
 
-impl SelectMenuOptionBuilder {
-    /// Create a new builder for select menu options.
-    #[must_use]
-    pub const fn new(label: String, value: String) -> Self {
-        Self {
-            default: false,
-            description: None,
-            emoji: None,
-            label,
-            value,
-        }
+impl ComponentsBuilder {
+    /// Consume this builder and return the configured [`Component`]s.
+    pub fn build(self) -> Vec<Component> {
+        self.action_rows
+            .into_iter()
+            .map(Component::ActionRow)
+            .collect()
     }
 
-    /// Set this select menu option to be selected by default.
+    /// Add an action row of buttons.
     #[must_use]
-    pub const fn default(mut self) -> Self {
-        self.default = true;
-
-        self
-    }
-
-    /// Set a description for this select menu option.
-    #[must_use]
-    pub fn description(mut self, description: String) -> Self {
-        self.description = Some(description);
-
-        self
-    }
-
-    // noinspection DuplicatedCode
-    /// Set a custom emoji for this select menu option.
-    #[must_use]
-    pub fn custom_emoji(mut self, name: String, id: Id<EmojiMarker>, animated: bool) -> Self {
-        self.emoji = Some(ReactionType::Custom {
-            animated,
-            id,
-            name: Some(name),
+    pub fn buttons(mut self, buttons: Vec<Button>) -> Self {
+        self.action_rows.push(ActionRow {
+            components: buttons.into_iter().map(Component::Button).collect(),
         });
 
         self
     }
 
-    /// Set a unicode emoji for this select menu option.
+    /// Create a new builder for components.
     #[must_use]
-    pub fn unicode_emoji(mut self, emoji: String) -> Self {
-        self.emoji = Some(ReactionType::Unicode { name: emoji });
+    pub const fn new() -> Self {
+        Self {
+            action_rows: vec![],
+        }
+    }
+
+    /// Add a select menu.
+    ///
+    /// Since an action row can't have multiple select menus or mix select menus
+    /// and buttons, this is the only method for adding select menus.
+    #[must_use]
+    pub fn select_menu(mut self, select_menu: SelectMenu) -> Self {
+        self.action_rows.push(ActionRow {
+            components: vec![Component::SelectMenu(select_menu)],
+        });
 
         self
     }
+}
 
-    /// Consume this builder and return the configured [`SelectMenuOption`]
-    #[must_use]
-    pub fn build(self) -> SelectMenuOption {
-        SelectMenuOption {
-            default: self.default,
-            description: self.description,
-            emoji: self.emoji,
-            label: self.label,
-            value: self.value,
-        }
+impl Default for ComponentsBuilder {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -187,16 +173,16 @@ pub struct SelectMenuBuilder {
 }
 
 impl SelectMenuBuilder {
-    /// Create a new builder for select menus.
+    /// Consume this builder and return the configured [`SelectMenuOption`]
     #[must_use]
-    pub fn new(custom_id: String, options: Vec<SelectMenuOption>) -> Self {
-        Self {
-            custom_id,
-            disabled: false,
-            max_values: None,
-            min_values: None,
-            options,
-            placeholder: None,
+    pub fn build(self) -> SelectMenu {
+        SelectMenu {
+            custom_id: self.custom_id,
+            disabled: self.disabled,
+            max_values: self.max_values,
+            min_values: self.min_values,
+            options: self.options,
+            placeholder: self.placeholder,
         }
     }
 
@@ -226,6 +212,19 @@ impl SelectMenuBuilder {
         self
     }
 
+    /// Create a new builder for select menus.
+    #[must_use]
+    pub const fn new(custom_id: String, options: Vec<SelectMenuOption>) -> Self {
+        Self {
+            custom_id,
+            disabled: false,
+            max_values: None,
+            min_values: None,
+            options,
+            placeholder: None,
+        }
+    }
+
     /// Set the text to be shown when no options are selected.
     #[must_use]
     pub fn placeholder(mut self, placeholder: String) -> Self {
@@ -233,18 +232,77 @@ impl SelectMenuBuilder {
 
         self
     }
+}
 
+/// Create a [`SelectMenuOption`] with a builder.
+#[derive(Clone, Eq, PartialEq, Hash, Debug)]
+pub struct SelectMenuOptionBuilder {
+    default: bool,
+    description: Option<String>,
+    emoji: Option<ReactionType>,
+    label: String,
+    value: String,
+}
+
+impl SelectMenuOptionBuilder {
     /// Consume this builder and return the configured [`SelectMenuOption`]
     #[must_use]
-    pub fn build(self) -> SelectMenu {
-        SelectMenu {
-            custom_id: self.custom_id,
-            disabled: self.disabled,
-            max_values: self.max_values,
-            min_values: self.min_values,
-            options: self.options,
-            placeholder: self.placeholder,
+    pub fn build(self) -> SelectMenuOption {
+        SelectMenuOption {
+            default: self.default,
+            description: self.description,
+            emoji: self.emoji,
+            label: self.label,
+            value: self.value,
         }
+    }
+
+    /// Set a custom emoji for this select menu option.
+    #[must_use]
+    pub fn custom_emoji(mut self, name: String, id: Id<EmojiMarker>, animated: bool) -> Self {
+        self.emoji = Some(ReactionType::Custom {
+            animated,
+            id,
+            name: Some(name),
+        });
+
+        self
+    }
+
+    /// Set this select menu option to be selected by default.
+    #[must_use]
+    pub const fn default(mut self) -> Self {
+        self.default = true;
+
+        self
+    }
+
+    /// Set a description for this select menu option.
+    #[must_use]
+    pub fn description(mut self, description: String) -> Self {
+        self.description = Some(description);
+
+        self
+    }
+
+    /// Create a new builder for select menu options.
+    #[must_use]
+    pub const fn new(label: String, value: String) -> Self {
+        Self {
+            default: false,
+            description: None,
+            emoji: None,
+            label,
+            value,
+        }
+    }
+
+    /// Set a unicode emoji for this select menu option.
+    #[must_use]
+    pub fn unicode_emoji(mut self, emoji: String) -> Self {
+        self.emoji = Some(ReactionType::Unicode { name: emoji });
+
+        self
     }
 }
 
@@ -262,18 +320,18 @@ pub struct TextInputBuilder {
 }
 
 impl TextInputBuilder {
-    /// Create a new builder for modals.
+    /// Consume this builder and return the configured [`TextInput`].
     #[must_use]
-    pub const fn new(label: String, custom_id: String) -> Self {
-        Self {
-            custom_id,
-            label,
-            max_length: None,
-            min_length: None,
-            placeholder: None,
-            required: false,
-            style: TextInputStyle::Short,
-            value: None,
+    pub fn build(self) -> TextInput {
+        TextInput {
+            custom_id: self.custom_id,
+            label: self.label,
+            max_length: self.max_length,
+            min_length: self.min_length,
+            placeholder: self.placeholder,
+            required: Some(self.required),
+            style: self.style,
+            value: self.value,
         }
     }
 
@@ -295,6 +353,29 @@ impl TextInputBuilder {
         self
     }
 
+    /// Create a new builder for modals.
+    #[must_use]
+    pub const fn new(label: String, custom_id: String) -> Self {
+        Self {
+            custom_id,
+            label,
+            max_length: None,
+            min_length: None,
+            placeholder: None,
+            required: false,
+            style: TextInputStyle::Short,
+            value: None,
+        }
+    }
+
+    /// Make this text input's style paragraph.
+    #[must_use]
+    pub const fn paragraph(mut self) -> Self {
+        self.style = TextInputStyle::Paragraph;
+
+        self
+    }
+
     /// Set the placeholder of this text input.
     #[must_use]
     pub fn placeholder(mut self, placeholder: String) -> Self {
@@ -311,87 +392,11 @@ impl TextInputBuilder {
         self
     }
 
-    /// Make this text input's style paragraph.
-    #[must_use]
-    pub const fn paragraph(mut self) -> Self {
-        self.style = TextInputStyle::Paragraph;
-
-        self
-    }
-
     /// Set the prefilled value of this text input.
     #[must_use]
     pub fn value(mut self, value: String) -> Self {
         self.value = Some(value);
 
         self
-    }
-
-    /// Consume this builder and return the configured [`TextInput`].
-    #[must_use]
-    pub fn build(self) -> TextInput {
-        TextInput {
-            custom_id: self.custom_id,
-            label: self.label,
-            max_length: self.max_length,
-            min_length: self.min_length,
-            placeholder: self.placeholder,
-            required: Some(self.required),
-            style: self.style,
-            value: self.value,
-        }
-    }
-}
-
-/// Create a vector of [`Component`]s with a builder.
-#[derive(Clone, Eq, PartialEq, Hash, Debug)]
-pub struct ComponentsBuilder {
-    action_rows: Vec<ActionRow>,
-}
-
-impl Default for ComponentsBuilder {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl ComponentsBuilder {
-    /// Create a new builder for components.
-    #[must_use]
-    pub const fn new() -> Self {
-        Self {
-            action_rows: vec![],
-        }
-    }
-
-    /// Add an action row of buttons.
-    #[must_use]
-    pub fn buttons(mut self, buttons: Vec<Button>) -> Self {
-        self.action_rows.push(ActionRow {
-            components: buttons.into_iter().map(Component::Button).collect(),
-        });
-
-        self
-    }
-
-    /// Add a select menu.
-    ///
-    /// Since an action row can't have multiple select menus or mix select menus
-    /// and buttons, this is the only method for adding select menus.
-    #[must_use]
-    pub fn select_menu(mut self, select_menu: SelectMenu) -> Self {
-        self.action_rows.push(ActionRow {
-            components: vec![Component::SelectMenu(select_menu)],
-        });
-
-        self
-    }
-
-    /// Consume this builder and return the configured [`Component`]s.
-    pub fn build(self) -> Vec<Component> {
-        self.action_rows
-            .into_iter()
-            .map(Component::ActionRow)
-            .collect()
     }
 }

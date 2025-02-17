@@ -4,8 +4,9 @@
 //! All the other builders can be created using methods on it.
 use twilight_model::{
     channel::message::{
+        Component,
+        MessageFlags,
         component::{ActionRow, TextInput},
-        Component, MessageFlags,
     },
     http::interaction::{InteractionResponse, InteractionResponseData, InteractionResponseType},
 };
@@ -16,29 +17,12 @@ use twilight_model::{
 /// [`InteractionResponseBuilder::defer_update_message`].
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
 pub struct DeferInteractionResponseBuilder {
-    response_type: InteractionResponseType,
     is_ephemeral: bool,
+    response_type: InteractionResponseType,
     suppress_embeds: bool,
 }
 
 impl DeferInteractionResponseBuilder {
-    /// Set the response to be ephemeral.
-    ///
-    /// This makes the response only visible to the user that created the
-    /// interaction.
-    #[must_use]
-    pub const fn ephemeral(mut self) -> Self {
-        self.is_ephemeral = true;
-        self
-    }
-
-    /// Set the response to not show embeds.
-    #[must_use]
-    pub const fn suppress_embeds(mut self) -> Self {
-        self.suppress_embeds = true;
-        self
-    }
-
     /// Consume this builder and return the configured [`InteractionResponse`]
     #[must_use]
     pub fn build(self) -> InteractionResponse {
@@ -66,52 +50,22 @@ impl DeferInteractionResponseBuilder {
             }),
         }
     }
-}
 
-/// Create an [`InteractionResponse`] to show a modal with a builder.
-///
-/// This is created with [`InteractionResponseBuilder::show_modal`].
-#[derive(Clone, Eq, PartialEq, Hash, Debug)]
-pub struct ModalInteractionResponseBuilder {
-    action_rows: Vec<ActionRow>,
-    custom_id: String,
-    title: String,
-}
-
-impl ModalInteractionResponseBuilder {
-    /// Add a text input component to this modal.
+    /// Set the response to be ephemeral.
+    ///
+    /// This makes the response only visible to the user that created the
+    /// interaction.
     #[must_use]
-    pub fn text_input(mut self, text_input: TextInput) -> Self {
-        self.action_rows.push(ActionRow {
-            components: vec![Component::TextInput(text_input)],
-        });
-
+    pub const fn ephemeral(mut self) -> Self {
+        self.is_ephemeral = true;
         self
     }
 
-    /// Consume this builder and return the configured
-    /// [`InteractionResponse`].
-    pub fn build(self) -> InteractionResponse {
-        InteractionResponse {
-            kind: InteractionResponseType::Modal,
-            data: Some(InteractionResponseData {
-                allowed_mentions: None,
-                attachments: None,
-                choices: None,
-                components: Some(
-                    self.action_rows
-                        .into_iter()
-                        .map(Component::ActionRow)
-                        .collect(),
-                ),
-                content: None,
-                custom_id: Some(self.custom_id),
-                embeds: None,
-                flags: None,
-                title: Some(self.title),
-                tts: None,
-            }),
-        }
+    /// Set the response to not show embeds.
+    #[must_use]
+    pub const fn suppress_embeds(mut self) -> Self {
+        self.suppress_embeds = true;
+        self
     }
 }
 
@@ -129,17 +83,6 @@ impl ModalInteractionResponseBuilder {
 pub struct InteractionResponseBuilder;
 
 impl InteractionResponseBuilder {
-    /// Create a response to a ping from Discord.
-    ///
-    /// This uses [`InteractionResponseType::Pong`] as the response type.
-    #[must_use]
-    pub const fn pong() -> InteractionResponse {
-        InteractionResponse {
-            kind: InteractionResponseType::Pong,
-            data: None,
-        }
-    }
-
     /// Defer an interaction to follow up with a message later.
     ///
     /// This method should be used when the message is expected to be sent after
@@ -154,18 +97,6 @@ impl InteractionResponseBuilder {
             response_type: InteractionResponseType::DeferredChannelMessageWithSource,
             is_ephemeral: false,
             suppress_embeds: false,
-        }
-    }
-
-    /// Respond to an interaction with a message.
-    ///
-    /// This uses [`InteractionResponseType::ChannelMessageWithSource`] as the
-    /// response type.
-    #[must_use]
-    pub const fn send_message(data: InteractionResponseData) -> InteractionResponse {
-        InteractionResponse {
-            kind: InteractionResponseType::ChannelMessageWithSource,
-            data: Some(data),
         }
     }
 
@@ -192,6 +123,42 @@ impl InteractionResponseBuilder {
         }
     }
 
+    /// Create a response to a ping from Discord.
+    ///
+    /// This uses [`InteractionResponseType::Pong`] as the response type.
+    #[must_use]
+    pub const fn pong() -> InteractionResponse {
+        InteractionResponse {
+            kind: InteractionResponseType::Pong,
+            data: None,
+        }
+    }
+
+    /// Respond to an interaction with a message.
+    ///
+    /// This uses [`InteractionResponseType::ChannelMessageWithSource`] as the
+    /// response type.
+    #[must_use]
+    pub const fn send_message(data: InteractionResponseData) -> InteractionResponse {
+        InteractionResponse {
+            kind: InteractionResponseType::ChannelMessageWithSource,
+            data: Some(data),
+        }
+    }
+
+    /// Respond to an interaction with a modal.
+    ///
+    /// This uses [`InteractionResponseType::Modal`] as the
+    /// response type.
+    #[must_use]
+    pub const fn show_modal(title: String, custom_id: String) -> ModalInteractionResponseBuilder {
+        ModalInteractionResponseBuilder {
+            action_rows: vec![],
+            custom_id,
+            title,
+        }
+    }
+
     /// Respond to a message component or modal interaction to edit the message
     /// with the component.
     ///
@@ -204,17 +171,51 @@ impl InteractionResponseBuilder {
             data: Some(data),
         }
     }
+}
 
-    /// Respond to an interaction with a modal.
-    ///
-    /// This uses [`InteractionResponseType::Modal`] as the
-    /// response type.
-    #[must_use]
-    pub fn show_modal(title: String, custom_id: String) -> ModalInteractionResponseBuilder {
-        ModalInteractionResponseBuilder {
-            action_rows: vec![],
-            custom_id,
-            title,
+/// Create an [`InteractionResponse`] to show a modal with a builder.
+///
+/// This is created with [`InteractionResponseBuilder::show_modal`].
+#[derive(Clone, Eq, PartialEq, Hash, Debug)]
+pub struct ModalInteractionResponseBuilder {
+    action_rows: Vec<ActionRow>,
+    custom_id: String,
+    title: String,
+}
+
+impl ModalInteractionResponseBuilder {
+    /// Consume this builder and return the configured
+    /// [`InteractionResponse`].
+    pub fn build(self) -> InteractionResponse {
+        InteractionResponse {
+            kind: InteractionResponseType::Modal,
+            data: Some(InteractionResponseData {
+                allowed_mentions: None,
+                attachments: None,
+                choices: None,
+                components: Some(
+                    self.action_rows
+                        .into_iter()
+                        .map(Component::ActionRow)
+                        .collect(),
+                ),
+                content: None,
+                custom_id: Some(self.custom_id),
+                embeds: None,
+                flags: None,
+                title: Some(self.title),
+                tts: None,
+            }),
         }
+    }
+
+    /// Add a text input component to this modal.
+    #[must_use]
+    pub fn text_input(mut self, text_input: TextInput) -> Self {
+        self.action_rows.push(ActionRow {
+            components: vec![Component::TextInput(text_input)],
+        });
+
+        self
     }
 }
