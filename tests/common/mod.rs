@@ -1,4 +1,4 @@
-use std::{env, sync::Arc};
+use std::{env, fs, io::Write, sync::Arc};
 
 use dotenvy::dotenv;
 use sparkle_interactions::{
@@ -24,18 +24,22 @@ pub(crate) fn client() -> Result<Client, anyhow::Error> {
 
 pub(crate) async fn interaction_handle() -> Result<InteractionHandle, anyhow::Error> {
     let client = client()?;
+    let application_id = env::var("APPLICATION_ID")?.parse()?;
 
-    let application_id = client.current_user_application().await?.model().await?.id;
+    if env::var("INTERACTION_CREATED").is_err() {
+        client
+            .interaction(application_id)
+            .set_guild_commands(env::var("GUILD_ID")?.parse()?, &[CommandBuilder::new(
+                "sparkle_interactions_test",
+                "Command created by Sparkle Interactions for testing purposes",
+                CommandType::ChatInput,
+            )
+            .build()])
+            .await?;
 
-    client
-        .interaction(application_id)
-        .set_guild_commands(env::var("GUILD_ID")?.parse()?, &[CommandBuilder::new(
-            "sparkle_interactions_test",
-            "Command created by Sparkle Interactions for testing purposes",
-            CommandType::ChatInput,
-        )
-        .build()])
-        .await?;
+        let mut env_file = fs::OpenOptions::new().append(true).open(".env")?;
+        writeln!(env_file, "INTERACTION_CREATED=1")?;
+    }
 
     let mut shard = Shard::new(
         ShardId::ONE,

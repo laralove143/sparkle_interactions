@@ -72,9 +72,10 @@ This crate makes use of unit tests and integration tests. Unit tests can be run 
 
 Since integration tests receive Discord events and make requests to Discord, you should first set these environment variables in a `.env` file located in the root of this repository:
 
+- `APPLICATION_ID`: The ID of the application to use for testing
 - `BOT_TOKEN`: The token of the bot to use for testing
-- `GUILD_ID`: The ID of the server where the test command will be created
 - `CHANNEL_ID`: The ID of the channel where the test message with a component will be created
+- `GUILD_ID`: The ID of the server where the test command will be created
 
 Each test runs on an interaction. Since bots can't create interactions, when running the test, the bot will wait for an `InteractionCreate` event to use for testing.
 
