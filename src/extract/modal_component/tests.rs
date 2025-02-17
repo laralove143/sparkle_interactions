@@ -6,7 +6,7 @@ use twilight_model::{
     channel::message::component::ComponentType,
 };
 
-use crate::extract::modal_component::ExtractModalComponentRef;
+use crate::extract::modal_component::ExtractModalComponent;
 
 #[test]
 fn test_extract_component() {
